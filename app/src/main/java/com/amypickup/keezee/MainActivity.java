@@ -1,121 +1,108 @@
 package com.amypickup.keezee;
 
 import android.content.Context;
+import android.content.Intent;
+
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.Toast;
+
 
 import java.io.IOException;
 
+
 public class MainActivity extends AppCompatActivity {
 
-    private static final String LOG_TAG = "AudioRecordTest";
+    private static final String LOG_TAG = "AudioRecord";
     private static String mFileName = null;
 
-//    private RecordButton mRecordButton = null;
     private MediaRecorder mRecorder = null;
+    private MediaPlayer   mPlayer = null;
 
-//    private PlayButton   mPlayButton = null;
-    private MediaPlayer mPlayer = null;
-
-    KeezyButton buttons[] = new KeezyButton[8];
+    private Button[] buttons = null;
+    private boolean isLongClick = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-/*
-        LinearLayout ll = new LinearLayout(this);
-        mRecordButton = new RecordButton(this);
 
-        ll.addView(mRecordButton,
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        0));
-        mPlayButton = new PlayButton(this);
-        ll.addView(mPlayButton,
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        0));
-        setContentView(ll);
-*/
+        buttons = new Button[8];
         // add buttons to button array
-        buttons[0] = (KeezyButton) findViewById(R.id.button0);
-        buttons[1] = (KeezyButton) findViewById(R.id.button1);
-        buttons[4] = (KeezyButton) findViewById(R.id.button4);
-        buttons[5] = (KeezyButton) findViewById(R.id.button5);
+        buttons[0] = (Button) findViewById(R.id.button0);
+        buttons[1] = (Button) findViewById(R.id.button1);
+        buttons[2] = (Button) findViewById(R.id.button4);
+        buttons[3] = (Button) findViewById(R.id.button5);
+
+        buttons[0].setOnClickListener(onClickListener);
+        buttons[1].setOnLongClickListener(onLongClickListener);
+        buttons[1].setOnTouchListener(onTouchListener);
 
         // create onClickListeners for each button in array
+/*
         for(int i = 0; i<buttons.length; i++) {
 
             if (buttons[i] != null) {
-                buttons[i].setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        // play audio
-                        makeToast();
-                    }
-                });
+                buttons[i].setOnClickListener(onClickListener);
+                buttons[i].setOnLongClickListener(onLongClickListener);
+                buttons[i].setOnTouchListener(onTouchListener);
 
-                buttons[i].setOnLongClickListener(new View.OnLongClickListener() {
-                    @Override
-                    public boolean onLongClick(View v) {
-                        // record audio
-                        makeLongToast();
-                        return true;
-                    }
-                });
             }
         }
+*/
 
     }
 
-    public void makeToast() {
-        Context context = getApplicationContext();
-        CharSequence text = "Hello Short toast!";
-        int duration = Toast.LENGTH_SHORT;
+    private View.OnClickListener onClickListener = new View.OnClickListener() {
 
-        Toast.makeText(context, text, duration).show();
-    }
-
-    public void makeLongToast() {
-        Context context = getApplicationContext();
-        CharSequence text = "Hello Loooooong toast!";
-        int duration = Toast.LENGTH_SHORT;
-
-        Toast.makeText(context, text, duration).show();
-    }
-
-
-
-
-    private void onRecord(boolean start) {
-        if (start) {
-            startRecording();
-        } else {
-            stopRecording();
-        }
-    }
-
-    private void onPlay(boolean start) {
-        if (start) {
+        @Override
+        public void onClick(View v) {
+            // play audio
+            System.out.println("+++++++++++++++++ Click");
             startPlaying();
-        } else {
+            System.out.println("Playing..........");
             stopPlaying();
+
         }
-    }
+    };
+
+    private View.OnLongClickListener onLongClickListener = new View.OnLongClickListener() {
+
+        @Override
+        public boolean onLongClick(View pView) {
+            // Do something when your hold starts here.
+            System.out.println("+++++++++++++++++ Long Click");
+            startRecording();
+            isLongClick = true;
+            return true;
+        }
+    };
+
+    private View.OnTouchListener onTouchListener = new View.OnTouchListener() {
+
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            v.onTouchEvent(event);
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                if(isLongClick) {
+                    System.out.println("+++++++++++++++++ Click Released");
+                    stopRecording();
+                    isLongClick=false;
+                }
+            }
+            return true;
+        }
+    };
 
     private void startPlaying() {
+        System.out.println("+++++++++++++++++ Start Playing");
         mPlayer = new MediaPlayer();
         try {
             mPlayer.setDataSource(mFileName);
@@ -127,11 +114,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopPlaying() {
+        System.out.println("+++++++++++++++++ Stop Playing");
         mPlayer.release();
         mPlayer = null;
     }
 
     private void startRecording() {
+        System.out.println("+++++++++++++++++ Start Recording");
+
         mRecorder = new MediaRecorder();
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
@@ -145,59 +135,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         mRecorder.start();
+
     }
 
     private void stopRecording() {
+        System.out.println("+++++++++++++++++ Stop Recording");
         mRecorder.stop();
         mRecorder.release();
         mRecorder = null;
     }
 
-    class KeezyButton extends Button {
-        boolean mStartRecording = true;
-        boolean mStartPlaying = true;
-
-        boolean clicked=false;
-
-        OnLongClickListener clicker = new OnLongClickListener() {
-            public void onLongClick(View v) {
-                onRecord(mStartRecording);
-                if (mStartRecording) {
-                    setText("Stop recording");
-                } else {
-                    setText("Start recording");
-                }
-                mStartRecording = !mStartRecording;
-            }
-        };
-
-        OnClickListener clicker = new OnClickListener() {
-            public void onClick(View v) {
-                onPlay(mStartPlaying);
-                if (mStartPlaying) {
-                    setText("Stop playing");
-                } else {
-                    setText("Start playing");
-                }
-                mStartPlaying = !mStartPlaying;
-            }
-        };
-
-        public RecordButton(Context ctx) {
-            super(ctx);
-            setText("Start recording");
-            setOnLongClickListener(clicker);
-        }
-
-        public PlayButton(Context ctx) {
-            super(ctx);
-            setText("Start playing");
-            setOnClickListener(clicker);
-        }
-
-    }
-
-    public void AudioRecordTest() {
+    public MainActivity() {
         mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
         mFileName += "/audiorecordtest.3gp";
     }
@@ -214,6 +162,14 @@ public class MainActivity extends AppCompatActivity {
             mPlayer.release();
             mPlayer = null;
         }
+    }
+
+    public void makeToast(String toastText) {
+        Context context = getApplicationContext();
+        CharSequence text = toastText;
+        int duration = Toast.LENGTH_SHORT;
+
+        Toast.makeText(context, text, duration).show();
     }
 
 }
