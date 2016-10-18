@@ -18,17 +18,19 @@ import android.widget.Toast;
 import java.io.IOException;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+        implements View.OnClickListener, View.OnLongClickListener, View.OnTouchListener {
 
     private static final String LOG_TAG = "AudioRecord";
-    private static String mFileName = null;
+    private String mFileName = null;
 
     private MediaRecorder mRecorder = null;
-    private MediaPlayer   mPlayer = null;
+    private MediaPlayer mPlayer = null;
 
     private Button[] buttons = null;
-    private boolean isClick = false;
-    private boolean isLongClick = false;
+    private boolean isClick, isLongClick = false;
+
+    boolean mStartPlaying, mStartRecording = true;
 
 
     @Override
@@ -40,77 +42,72 @@ public class MainActivity extends AppCompatActivity {
         // add buttons to button array
         buttons[0] = (Button) findViewById(R.id.button0);
         buttons[1] = (Button) findViewById(R.id.button1);
-        buttons[2] = (Button) findViewById(R.id.button4);
-        buttons[3] = (Button) findViewById(R.id.button5);
-
-        buttons[0].setOnClickListener(onClickListener);
-        buttons[0].setOnLongClickListener(onLongClickListener);
-        buttons[0].setOnTouchListener(onTouchListener);
+        buttons[2] = (Button) findViewById(R.id.button2);
+        buttons[3] = (Button) findViewById(R.id.button3);
+        buttons[4] = (Button) findViewById(R.id.button4);
+        buttons[5] = (Button) findViewById(R.id.button5);
+        buttons[6] = (Button) findViewById(R.id.button6);
+        buttons[7] = (Button) findViewById(R.id.button7);
 
         // create onClickListeners for each button in array
-/*
-        for(int i = 0; i<buttons.length; i++) {
+
+        for (int i = 0; i < buttons.length; i++) {
 
             if (buttons[i] != null) {
-                buttons[i].setOnClickListener(onClickListener);
-                buttons[i].setOnLongClickListener(onLongClickListener);
-                buttons[i].setOnTouchListener(onTouchListener);
+                buttons[i].setOnClickListener(this);
+                buttons[i].setOnLongClickListener(this);
+                buttons[i].setOnTouchListener(this);
 
             }
         }
-*/
 
     }
 
-    private View.OnClickListener onClickListener = new View.OnClickListener() {
-
-        @Override
-        public void onClick(View v) {
-            // play audio
-            System.out.println("+++++++++++++++++ Click");
-            startPlaying();
-            isClick = true;
-
+    @Override
+    public void onClick(View v) {
+        // on short click, play recorded sound
+        if(mPlayer != null) {
+            stopPlaying();
         }
-    };
+        System.out.println("+++++++++++++++++ Click");
+        startPlaying(v.getId());
+        mStartPlaying = !mStartPlaying;
+        isClick = true;
+    }
 
-    private View.OnLongClickListener onLongClickListener = new View.OnLongClickListener() {
+    @Override
+    public boolean onLongClick(View v) {
+        // On long click, start recording, pass in the filename
+        System.out.println("+++++++++++++++++ Long Click");
 
-        @Override
-        public boolean onLongClick(View pView) {
-            // Do something when your hold starts here.
-            System.out.println("+++++++++++++++++ Long Click");
-            startRecording();
-            isLongClick = true;
-            return true;
+        if(mPlayer != null) {
+            stopPlaying();
         }
-    };
+        startRecording(v.getId());
+        isLongClick = true;
+        return true;
+    }
 
-    private View.OnTouchListener onTouchListener = new View.OnTouchListener() {
-
-        @Override
-        public boolean onTouch(View v, MotionEvent event) {
-            v.onTouchEvent(event);
-            if (event.getAction() == MotionEvent.ACTION_UP) {
-                System.out.println("+++++++++++++++++ Click Released");
-                if(isClick) {
-                    stopPlaying();
-                    isClick=false;
-                } else if(isLongClick) {
-                    stopRecording();
-                    isLongClick=false;
-                }
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        // On touch release, stop play or record
+        v.onTouchEvent(event);
+        if (event.getAction() == MotionEvent.ACTION_UP) {
+            System.out.println("+++++++++++++++++ Click Released " + isLongClick);
+            if(isLongClick) {
+                stopRecording();
+                isLongClick=false;
             }
-            return true;
         }
-    };
+        return true;
+    }
 
-
-    private void startPlaying() {
+    private void startPlaying(int buttonNum) {
         System.out.println("+++++++++++++++++ Start Playing");
         mPlayer = new MediaPlayer();
         try {
-            mPlayer.setDataSource(mFileName);
+            System.out.println("Trying to play file: " + "/audiorecordtest" + String.valueOf(buttonNum) + ".3gp");
+            mPlayer.setDataSource(mFileName + "/audiorecordtest" + String.valueOf(buttonNum) + ".3gp");
             mPlayer.prepare();
             mPlayer.start();
         } catch (IOException e) {
@@ -124,15 +121,16 @@ public class MainActivity extends AppCompatActivity {
         mPlayer = null;
     }
 
-    private void startRecording() {
+    private void startRecording(int buttonNum) {
         System.out.println("+++++++++++++++++ Start Recording");
 
         mRecorder = new MediaRecorder();
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mRecorder.setOutputFile(mFileName);
+        mRecorder.setOutputFile(mFileName + "/audiorecordtest" + String.valueOf(buttonNum) + ".3gp");
         mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
 
+        System.out.println("Recording to file: " + "/audiorecordtest" + String.valueOf(buttonNum) + ".3gp");
         try {
             mRecorder.prepare();
         } catch (IOException e) {
@@ -152,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
 
     public MainActivity() {
         mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
-        mFileName += "/audiorecordtest.3gp";
+       // mFileName += "/audiorecordtest.3gp";
     }
 
     @Override
