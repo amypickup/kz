@@ -27,7 +27,9 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer   mPlayer = null;
 
     private Button[] buttons = null;
+    private boolean isClick = false;
     private boolean isLongClick = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,8 +44,8 @@ public class MainActivity extends AppCompatActivity {
         buttons[3] = (Button) findViewById(R.id.button5);
 
         buttons[0].setOnClickListener(onClickListener);
-        buttons[1].setOnLongClickListener(onLongClickListener);
-        buttons[1].setOnTouchListener(onTouchListener);
+        buttons[0].setOnLongClickListener(onLongClickListener);
+        buttons[0].setOnTouchListener(onTouchListener);
 
         // create onClickListeners for each button in array
 /*
@@ -67,8 +69,7 @@ public class MainActivity extends AppCompatActivity {
             // play audio
             System.out.println("+++++++++++++++++ Click");
             startPlaying();
-            System.out.println("Playing..........");
-            stopPlaying();
+            isClick = true;
 
         }
     };
@@ -91,8 +92,11 @@ public class MainActivity extends AppCompatActivity {
         public boolean onTouch(View v, MotionEvent event) {
             v.onTouchEvent(event);
             if (event.getAction() == MotionEvent.ACTION_UP) {
-                if(isLongClick) {
-                    System.out.println("+++++++++++++++++ Click Released");
+                System.out.println("+++++++++++++++++ Click Released");
+                if(isClick) {
+                    stopPlaying();
+                    isClick=false;
+                } else if(isLongClick) {
                     stopRecording();
                     isLongClick=false;
                 }
@@ -100,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
     };
+
 
     private void startPlaying() {
         System.out.println("+++++++++++++++++ Start Playing");
