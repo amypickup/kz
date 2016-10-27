@@ -3,11 +3,16 @@ package com.amypickup.keezee;
 import android.content.Context;
 import android.content.Intent;
 
+import android.media.AudioAttributes;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.media.SoundPool;
+import android.media.SoundPool.OnLoadCompleteListener;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.os.Build;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -16,19 +21,37 @@ import android.widget.Toast;
 
 
 import java.io.IOException;
+import java.util.HashMap;
 
 
 public class MainActivity extends AppCompatActivity
         implements View.OnClickListener, View.OnLongClickListener, View.OnTouchListener {
 
     private static final String LOG_TAG = "AudioRecord";
+    private static final int MAX_STREAMS = 8;
+
+    // Stream type.
+    private static final int streamType = AudioManager.STREAM_MUSIC;
+
     private String mFileName = null;
+
+    private SoundPool soundPool;
+    private AudioManager audioManager;
 
     private MediaRecorder mRecorder = null;
     private MediaPlayer mPlayer = null;
 
     private Button[] buttons = null;
+    private int[] soundIds = null;
+
+    HashMap buttonMap = null;
+
     private boolean isClick, isLongClick = false;
+    boolean plays = false, loaded = false;
+
+
+    private float actVolume, maxVolume, volume;
+    private int currentButtonId, counter;
 
     boolean mStartPlaying, mStartRecording = true;
 
@@ -38,7 +61,50 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        buttons = new Button[8];
+        // AudioManager audio settings for adjusting the volume
+        audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+
+        actVolume = (float) audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        maxVolume = (float) audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        volume = actVolume / maxVolume;
+
+        //Hardware buttons setting to adjust the media sound
+        this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
+
+        counter = 0;
+
+        // For Android SDK >= 21
+        if (Build.VERSION.SDK_INT >= 21 ) {
+
+            AudioAttributes audioAttrib = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_GAME)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build();
+
+            SoundPool.Builder builder= new SoundPool.Builder()
+                    .setAudioAttributes(audioAttrib)
+                    .setMaxStreams(MAX_STREAMS);
+
+            this.soundPool = builder.build();
+        }
+        // for Android SDK < 21
+        else {
+            // SoundPool(int maxStreams, int streamType, int srcQuality)
+            this.soundPool = new SoundPool(MAX_STREAMS, AudioManager.STREAM_MUSIC, 0);
+        }
+
+        soundPool.setOnLoadCompleteListener(new OnLoadCompleteListener() {
+            @Override
+            public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
+                loaded = true;
+            }
+        });
+
+
+
+
+
+        buttons = new Button[MAX_STREAMS];
         // add buttons to button array
         buttons[0] = (Button) findViewById(R.id.button0);
         buttons[1] = (Button) findViewById(R.id.button1);
@@ -51,7 +117,7 @@ public class MainActivity extends AppCompatActivity
 
         // create onClickListeners for each button in array
 
-        for (int i = 0; i < buttons.length; i++) {
+        for (int i = 0; i < MAX_STREAMS; i++) {
 
             if (buttons[i] != null) {
                 buttons[i].setOnClickListener(this);
@@ -60,6 +126,9 @@ public class MainActivity extends AppCompatActivity
 
             }
         }
+
+        soundIds = new int[MAX_STREAMS];
+        buttonMap = new HashMap();
 
     }
 
@@ -83,7 +152,8 @@ public class MainActivity extends AppCompatActivity
         if(mPlayer != null) {
             stopPlaying();
         }
-        startRecording(v.getId());
+        currentButtonId = v.getId();
+        startRecording();
         isLongClick = true;
         return true;
     }
@@ -96,6 +166,7 @@ public class MainActivity extends AppCompatActivity
             System.out.println("+++++++++++++++++ Click Released " + isLongClick);
             if(isLongClick) {
                 stopRecording();
+             //   this.soundId = this.soundPool.load(this, mFileName, 1);
                 isLongClick=false;
             }
         }
@@ -104,10 +175,18 @@ public class MainActivity extends AppCompatActivity
 
     private void startPlaying(int buttonNum) {
         System.out.println("+++++++++++++++++ Start Playing");
+
+// Is the sound loaded does it already play?
+   /*     if (loaded && !plays) {
+            soundPool.play(soundID, volume, volume, 1, 0, 1f);
+            counter = counter++;
+            Toast.makeText(this, "Played sound", Toast.LENGTH_SHORT).show();
+            plays = true;
+        }
+*/
         mPlayer = new MediaPlayer();
         try {
-            System.out.println("Trying to play file: " + "/audiorecordtest" + String.valueOf(buttonNum) + ".3gp");
-            mPlayer.setDataSource(mFileName + "/audiorecordtest" + String.valueOf(buttonNum) + ".3gp");
+            mPlayer.setDataSource(mFileName);
             mPlayer.prepare();
             mPlayer.start();
         } catch (IOException e) {
@@ -117,20 +196,28 @@ public class MainActivity extends AppCompatActivity
 
     private void stopPlaying() {
         System.out.println("+++++++++++++++++ Stop Playing");
+/*
+        if (plays) {
+            soundPool.stop(soundID);
+            soundID = soundPool.load(this, R.raw.beep, counter);
+            Toast.makeText(this, "Stop sound", Toast.LENGTH_SHORT).show();
+            plays = false;
+        }
+        */
+
         mPlayer.release();
         mPlayer = null;
     }
 
-    private void startRecording(int buttonNum) {
+    private void startRecording() {
         System.out.println("+++++++++++++++++ Start Recording");
 
         mRecorder = new MediaRecorder();
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mRecorder.setOutputFile(mFileName + "/audiorecordtest" + String.valueOf(buttonNum) + ".3gp");
+        mRecorder.setOutputFile(mFileName);
         mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
 
-        System.out.println("Recording to file: " + "/audiorecordtest" + String.valueOf(buttonNum) + ".3gp");
         try {
             mRecorder.prepare();
         } catch (IOException e) {
@@ -145,12 +232,21 @@ public class MainActivity extends AppCompatActivity
         System.out.println("+++++++++++++++++ Stop Recording");
         mRecorder.stop();
         mRecorder.release();
+
+        //int soundID = soundPool.load(mFileName, 1);
+        //buttonMap.put(currentButtonId, soundID);
+
+        System.out.println("Attempting to save then play " + mFileName);
+
+
+        soundPool.play(soundPool.load(mFileName, 1), volume, volume, 1, 0, 1f);
+
         mRecorder = null;
     }
 
     public MainActivity() {
         mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
-       // mFileName += "/audiorecordtest.3gp";
+        mFileName += "/audiorecordtest.3gp";
     }
 
     @Override
