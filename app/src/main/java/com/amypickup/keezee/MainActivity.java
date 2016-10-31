@@ -41,17 +41,14 @@ public class MainActivity extends AppCompatActivity
     private MediaRecorder mRecorder = null;
     private MediaPlayer mPlayer = null;
 
-    private Button[] buttons = null;
-    private int[] soundIds = null;
-
-    HashMap buttonMap = null;
+    private HashMap<Integer, Tile> tiles;
 
     private boolean isClick, isLongClick = false;
     boolean plays = false, loaded = false;
 
 
     private float actVolume, maxVolume, volume;
-    private int currentButtonId, counter;
+    private int counter;
 
     boolean mStartPlaying, mStartRecording = true;
 
@@ -101,34 +98,27 @@ public class MainActivity extends AppCompatActivity
         });
 
 
+        tiles = new HashMap<Integer, Tile>();
 
+        // add button references to tiles list
+        tiles.put(new Integer(R.id.button0), new Tile((Button) findViewById(R.id.button0)));
+        tiles.put(new Integer(R.id.button1), new Tile((Button) findViewById(R.id.button1)));
+        tiles.put(new Integer(R.id.button2), new Tile((Button) findViewById(R.id.button2)));
+        tiles.put(new Integer(R.id.button3), new Tile((Button) findViewById(R.id.button3)));
+        tiles.put(new Integer(R.id.button4), new Tile((Button) findViewById(R.id.button4)));
+        tiles.put(new Integer(R.id.button5), new Tile((Button) findViewById(R.id.button5)));
+        tiles.put(new Integer(R.id.button6), new Tile((Button) findViewById(R.id.button6)));
+        tiles.put(new Integer(R.id.button7), new Tile((Button) findViewById(R.id.button7)));
 
-
-        buttons = new Button[MAX_STREAMS];
-        // add buttons to button array
-        buttons[0] = (Button) findViewById(R.id.button0);
-        buttons[1] = (Button) findViewById(R.id.button1);
-        buttons[2] = (Button) findViewById(R.id.button2);
-        buttons[3] = (Button) findViewById(R.id.button3);
-        buttons[4] = (Button) findViewById(R.id.button4);
-        buttons[5] = (Button) findViewById(R.id.button5);
-        buttons[6] = (Button) findViewById(R.id.button6);
-        buttons[7] = (Button) findViewById(R.id.button7);
-
-        // create onClickListeners for each button in array
-
-        for (int i = 0; i < MAX_STREAMS; i++) {
-
-            if (buttons[i] != null) {
-                buttons[i].setOnClickListener(this);
-                buttons[i].setOnLongClickListener(this);
-                buttons[i].setOnTouchListener(this);
+        // create onClickListeners for each button in tiles array
+        for (Tile t : tiles.values()) {
+            if (t != null) {
+                t.getButtonId().setOnClickListener(this);
+                t.getButtonId().setOnLongClickListener(this);
+                t.getButtonId().setOnTouchListener(this);
 
             }
         }
-
-        soundIds = new int[MAX_STREAMS];
-        buttonMap = new HashMap();
 
     }
 
@@ -138,22 +128,23 @@ public class MainActivity extends AppCompatActivity
         if(mPlayer != null) {
             stopPlaying();
         }
-        System.out.println("+++++++++++++++++ Click");
+        System.out.println("KEEZEEE:  Click");
         startPlaying(v.getId());
         mStartPlaying = !mStartPlaying;
         isClick = true;
+
+
     }
 
     @Override
     public boolean onLongClick(View v) {
         // On long click, start recording, pass in the filename
-        System.out.println("+++++++++++++++++ Long Click");
+        // System.out.println("KEEZEE: Long Click on " + v.getId());
 
         if(mPlayer != null) {
             stopPlaying();
         }
-        currentButtonId = v.getId();
-        startRecording();
+        startRecording(v.getId());
         isLongClick = true;
         return true;
     }
@@ -163,27 +154,29 @@ public class MainActivity extends AppCompatActivity
         // On touch release, stop play or record
         v.onTouchEvent(event);
         if (event.getAction() == MotionEvent.ACTION_UP) {
-            System.out.println("+++++++++++++++++ Click Released " + isLongClick);
+            // System.out.println("KEEZEE: Click Released " + isLongClick);
             if(isLongClick) {
-                stopRecording();
-             //   this.soundId = this.soundPool.load(this, mFileName, 1);
+                stopRecording(v.getId());
                 isLongClick=false;
             }
         }
         return true;
     }
 
-    private void startPlaying(int buttonNum) {
-        System.out.println("+++++++++++++++++ Start Playing");
+    private void startPlaying(int viewId) {
 
 // Is the sound loaded does it already play?
    /*     if (loaded && !plays) {
-            soundPool.play(soundID, volume, volume, 1, 0, 1f);
+            soundPool.play(soundIds[0], volume, volume, 1, 0, 1f);
             counter = counter++;
             Toast.makeText(this, "Played sound", Toast.LENGTH_SHORT).show();
             plays = true;
         }
 */
+        System.out.println("KEEZEE: Trying to play button " + viewId + " with sound " + tiles.get(viewId).getSoundId());
+
+        soundPool.play(tiles.get(viewId).getSoundId(), volume, volume, 1, 0, 1f);
+
         mPlayer = new MediaPlayer();
         try {
             mPlayer.setDataSource(mFileName);
@@ -195,7 +188,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void stopPlaying() {
-        System.out.println("+++++++++++++++++ Stop Playing");
+        System.out.println("KEEZEE: Stop Playing");
 /*
         if (plays) {
             soundPool.stop(soundID);
@@ -209,13 +202,16 @@ public class MainActivity extends AppCompatActivity
         mPlayer = null;
     }
 
-    private void startRecording() {
-        System.out.println("+++++++++++++++++ Start Recording");
+    private void startRecording(int buttonKey) {
+        System.out.println("KEEZEE: Start Recording on button " + buttonKey);
 
         mRecorder = new MediaRecorder();
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mRecorder.setOutputFile(mFileName);
+
+
+        mRecorder.setOutputFile(mFileName + "/keezee" + buttonKey + ".3gp");
+
         mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
 
         try {
@@ -228,25 +224,24 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    private void stopRecording() {
-        System.out.println("+++++++++++++++++ Stop Recording");
+    private void stopRecording(int buttonKey) {
         mRecorder.stop();
         mRecorder.release();
 
-        //int soundID = soundPool.load(mFileName, 1);
-        //buttonMap.put(currentButtonId, soundID);
+        System.out.println("KEEZEE: Attempting to save " + mFileName + "/keezee" + buttonKey + ".3gp");
 
-        System.out.println("Attempting to save then play " + mFileName);
-
-
-        soundPool.play(soundPool.load(mFileName, 1), volume, volume, 1, 0, 1f);
+        tiles.get(buttonKey).setSoundId(soundPool.load(mFileName + "/keezee" + buttonKey + ".3gp", 1));
 
         mRecorder = null;
+
+        System.out.println("KEEZEE: Stopping Recording on button " + tiles.get(buttonKey).getButtonId().getId() +
+                ", sound " + tiles.get(buttonKey).getSoundId());
+
     }
 
     public MainActivity() {
         mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
-        mFileName += "/audiorecordtest.3gp";
+      //  mFileName += "/audiorecordtest.3gp";
     }
 
     @Override
